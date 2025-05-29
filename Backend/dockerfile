@@ -1,0 +1,39 @@
+# Use official Python slim image
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    python3-dev \
+    pkg-config \
+    libglib2.0-dev \
+    libgirepository1.0-dev \
+    libcairo2-dev \
+    libdbus-1-dev \
+    patchelf \            
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python dependencies
+COPY wheelhouse /wheelhouse
+COPY requirements.txt .
+
+# Install Python dependencies from wheelhouse
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install --no-index --find-links=/wheelhouse -r requirements.txt
+
+# Copy backend application code
+COPY server.py .
+COPY reviewer_of_ai.py .
+
+# Copy built React frontend to be served statically
+COPY static ./static
+
+# Expose port for FastAPI
+EXPOSE 8000
+
+# Start FastAPI app using Uvicorn
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
