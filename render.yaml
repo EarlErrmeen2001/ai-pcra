@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: ai-pcra-backend
+    env: docker
+    plan: free
+    autoDeploy: true
+    repo: https://github.com/EarlErrmeen2001/ai-pcra.git
+    branch: main
+
+  - type: static
+    name: ai-pcra-frontend
+    env: static
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: code-review-dashboard/build
+    autoDeploy: true
+    repo: https://github.com/EarlErrmeen2001/ai-pcra.git
+    branch: main
