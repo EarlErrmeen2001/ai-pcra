@@ -1,14 +1,11 @@
 services:
   - type: web
-    name: ai-pcra
-    runtime: docker
+    name: ai-pcra-frontend-backend
+    env: docker
     plan: free
     region: oregon
     branch: main
-    buildFilter:
-      paths:
-        - Backend/Dockerfile
-        - render.yaml
-    dockerfilePath: Backend/Dockerfile
-    dockerContext: Backend
+    buildCommand: ""
+    startCommand: uvicorn server:app --host 0.0.0.0 --port 8000
+    dockerfilePath: Backend/dockerfile
     autoDeploy: true
