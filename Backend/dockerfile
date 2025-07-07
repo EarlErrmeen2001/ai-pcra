@@ -1,34 +1,18 @@
-# Use a slim official Python image
-FROM python:3.11-slim
+# Use official Python image
+FROM python:3.10-slim
 
-# Environment settings
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Install system packages required for building Python wheels and HTTPS support
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    gcc \
-    libffi-dev \
-    libssl-dev \
-    curl \
-    git \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory inside the container
+# Set working directory
 WORKDIR /app
 
-# Copy requirements and install them
-COPY requirements.txt .
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install -r requirements.txt
+# Copy wheelhouse and install dependencies from it
+COPY wheelhouse /app/wheelhouse
+COPY requirements.txt /app/
+RUN pip install --no-index --find-links=/app/wheelhouse -r requirements.txt
 
-# Copy project code and frontend static files (already in app/static)
-COPY . .
+# Copy app code and static build
+COPY server.py .
+COPY app ./app
 
-# Expose FastAPI default port
+# Expose port and run the app
 EXPOSE 8000
-
-# Start FastAPI server
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
