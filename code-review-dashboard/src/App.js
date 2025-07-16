@@ -1,50 +1,43 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import {
-  Chart as ChartJS,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
 
-// ✅ Register components before using them
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
-function App() {
+const App = () => {
   const [reviews, setReviews] = useState([]);
+  const [error, setError] = useState('');
+
+  const baseURL =
+    process.env.NODE_ENV === 'development'
+      ? 'http://localhost:8000'
+      : 'https://ai-pcra.onrender.com';
 
   useEffect(() => {
-    axios.get('https://ai-pcra.onrender.com/api/reviews')  // ✅ Use full URL for production
-      .then(res => setReviews(res.data))
-      .catch(err => console.error(err));
+    axios.get(`${baseURL}/api/reviews`)
+      .then((response) => {
+        setReviews(response.data);
+      })
+      .catch((err) => {
+        setError('Failed to load reviews');
+        console.error(err);
+      });
   }, []);
-
-  const chartData = {
-    labels: reviews.map(r => r.file),
-    datasets: [{
-      label: 'Issues Found',
-      data: reviews.map(r => r.issues_count),
-      backgroundColor: 'rgba(75, 192, 192, 0.6)'
-    }]
-  };
 
   return (
     <div>
-      <h1>Code Review Analytics</h1>
-      <Bar data={chartData} />
+      <h1>AI Code Review Dashboard</h1>
+      {error && <p>{error}</p>}
+      {reviews.map((review, index) => (
+        <div key={index}>
+          <h3>{review.filename}</h3>
+          <pre>{review.code}</pre>
+          <ul>
+            {review.issues.map((issue, i) => (
+              <li key={i}>Line {issue.line}: {issue.issue}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   );
-}
+};
 
 export default App;
