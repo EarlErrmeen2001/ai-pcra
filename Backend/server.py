@@ -1,52 +1,38 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
 import os
 
 app = FastAPI()
 
-# CORS (helpful for development or cross-origin frontend)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Use specific origins in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# In-memory store
+reviews_db = []
 
-# Serve the React static build
-app.mount("/static", StaticFiles(directory="app/static/static"), name="static")
+class CodeReviewRequest(BaseModel):
+    filename: str
+    code: str
 
-# Serve index.html at root
-@app.get("/")
-async def serve_index():
-    return FileResponse("app/static/index.html")
-
-# Catch-all to support React Router
-@app.get("/{full_path:path}")
-async def serve_react_app(full_path: str):
-    file_path = os.path.join("app", "static", full_path)
-    if os.path.exists(file_path) and not os.path.isdir(file_path):
-        return FileResponse(file_path)
-    return FileResponse("app/static/index.html")
-
-# In-memory storage for demo purposes
-review_results = []
+class Issue(BaseModel):
+    line: int
+    issue: str
 
 @app.post("/webhook")
-async def handle_webhook(payload: dict):
-    code = payload.get("code", "")
-    issues = []
+async def handle_webhook(data: CodeReviewRequest):
+    code = data.code
+    filename = data.filename
+    issues: List[Issue] = []
 
-    # Simple static checks
-    if "print(" in code:
-        issues.append({"line": 1, "issue": "Avoid using print statements in production."})
-    if "==" in code and "None" in code:
-        issues.append({"line": 2, "issue": "Use 'is' when comparing to None."})
+    lines = code.splitlines()
+    for idx, line in enumerate(lines, start=1):
+        if "print(" in line:
+            issues.append(Issue(line=idx, issue="Avoid using print statements in production."))
+        if "== None" in line:
+            issues.append(Issue(line=idx, issue="Use 'is' when comparing to None."))
 
-    review_results.append({
-        "filename": payload.get("filename", "unnamed"),
+    reviews_db.append({
+        "filename": filename,
         "issues": issues
     })
 
@@ -54,4 +40,47 @@ async def handle_webhook(payload: dict):
 
 @app.get("/api/reviews")
 async def get_reviews():
-    return review_results
+    return reviews_db
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from typing import List
+import os
+
+app = FastAPI()
+
+# In-memory store
+reviews_db = []
+
+class CodeReviewRequest(BaseModel):
+    filename: str
+    code: str
+
+class Issue(BaseModel):
+    line: int
+    issue: str
+
+@app.post("/webhook")
+async def handle_webhook(data: CodeReviewRequest):
+    code = data.code
+    filename = data.filename
+    issues: List[Issue] = []
+
+    lines = code.splitlines()
+    for idx, line in enumerate(lines, start=1):
+        if "print(" in line:
+            issues.append(Issue(line=idx, issue="Avoid using print statements in production."))
+        if "== None" in line:
+            issues.append(Issue(line=idx, issue="Use 'is' when comparing to None."))
+
+    reviews_db.append({
+        "filename": filename,
+        "issues": issues
+    })
+
+    return {"status": "received", "issues": issues}
+
+@app.get("/api/reviews")
+async def get_reviews():
+    return reviews_db
