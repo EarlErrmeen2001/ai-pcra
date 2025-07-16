@@ -5,15 +5,22 @@ import os
 
 app = FastAPI()
 
-# Serve static React files
+# Serve subdirectory static files
 app.mount("/static", StaticFiles(directory="app/static/static"), name="static")
 
-# API route example (replace with yours)
 @app.get("/api/health")
 def health_check():
     return {"status": "ok"}
 
-# Root route to serve React app
+# Serve root-level frontend files
 @app.get("/")
-def read_index():
+def serve_index():
     return FileResponse("app/static/index.html")
+
+@app.get("/favicon.ico")
+def serve_favicon():
+    return FileResponse("app/static/favicon.ico")
+
+@app.get("/manifest.json")
+def serve_manifest():
+    return FileResponse("app/static/manifest.json")
