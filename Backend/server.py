@@ -6,7 +6,7 @@ import os
 
 app = FastAPI()
 
-# Enable CORS (you can restrict this in production)
+# Enable CORS (optional but useful)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,10 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount the React frontend from app/static
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
-
-# Example API endpoint
+# ✅ API route first
 @app.get("/api/reviews")
 def get_reviews():
     return [
@@ -26,7 +23,7 @@ def get_reviews():
         {"filename": "file2.py", "issues": 2}
     ]
 
-# ✅ Webhook handler (POST only)
+# ✅ Webhook POST handler
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -34,8 +31,7 @@ async def webhook(request: Request):
     code = data.get("code")
 
     issues = []
-    lines = code.split("\n")
-    for i, line in enumerate(lines, start=1):
+    for i, line in enumerate(code.splitlines(), start=1):
         if "print(" in line:
             issues.append({"line": i, "issue": "Avoid using print statements in production."})
         if "== None" in line:
@@ -43,10 +39,13 @@ async def webhook(request: Request):
 
     return JSONResponse(content={"status": "received", "issues": issues})
 
-# Handle unmatched routes for React Router (like /dashboard, /about)
+# ✅ Catch-all route for React Router (must come before mount)
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
     index_path = os.path.join("app", "static", "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
+# ✅ Finally mount the React app at root AFTER all routes are declared
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
