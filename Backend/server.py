@@ -2,12 +2,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
 import os
 
 app = FastAPI()
 
-# Enable CORS (allow all origins for now)
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,18 +15,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ In-memory storage for webhook-submitted reviews
-submitted_reviews: List[dict] = []
-
-# ✅ Mount the React frontend from app/static
+# Serve React static files
 app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
 
-# ✅ Return all submitted review results
-@app.get("/api/reviews")
-def get_reviews():
-    return submitted_reviews
-
-# ✅ Webhook handler to analyze code and store the result
+# Webhook POST endpoint ✅
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -42,16 +33,21 @@ async def webhook(request: Request):
         if "== None" in line:
             issues.append({"line": i, "issue": "Use 'is' when comparing to None."})
 
-    # Store for frontend access
-    submitted_reviews.append({
-        "filename": filename,
-        "issues": len(issues),
-        "details": issues
-    })
+    # ✅ Save to a simple in-memory file (optional)
+    with open("webhook_results.json", "w") as f:
+        f.write(JSONResponse(content={"status": "received", "issues": issues}).body.decode())
 
     return JSONResponse(content={"status": "received", "issues": issues})
 
-# ✅ Fallback to serve React index.html for unknown routes
+# Example review endpoint (frontend fetches from here)
+@app.get("/api/reviews")
+def get_reviews():
+    return [
+        {"filename": "file1.py", "issues": 5},
+        {"filename": "file2.py", "issues": 2}
+    ]
+
+# Catch-all for React Router
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
     index_path = os.path.join("app", "static", "index.html")
