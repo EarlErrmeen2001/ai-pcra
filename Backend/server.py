@@ -6,7 +6,6 @@ import os
 
 app = FastAPI()
 
-# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,10 +14,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve React static files
 app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
 
-# Webhook POST endpoint ✅
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -26,20 +23,14 @@ async def webhook(request: Request):
     code = data.get("code")
 
     issues = []
-    lines = code.split("\n")
-    for i, line in enumerate(lines, start=1):
+    for i, line in enumerate(code.splitlines(), 1):
         if "print(" in line:
             issues.append({"line": i, "issue": "Avoid using print statements in production."})
         if "== None" in line:
             issues.append({"line": i, "issue": "Use 'is' when comparing to None."})
 
-    # ✅ Save to a simple in-memory file (optional)
-    with open("webhook_results.json", "w") as f:
-        f.write(JSONResponse(content={"status": "received", "issues": issues}).body.decode())
-
     return JSONResponse(content={"status": "received", "issues": issues})
 
-# Example review endpoint (frontend fetches from here)
 @app.get("/api/reviews")
 def get_reviews():
     return [
@@ -47,7 +38,6 @@ def get_reviews():
         {"filename": "file2.py", "issues": 2}
     ]
 
-# Catch-all for React Router
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
     index_path = os.path.join("app", "static", "index.html")
