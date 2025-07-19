@@ -15,11 +15,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount React build folder
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
-
-
-# Example API endpoint
+# ✅ API route comes first
 @app.get("/api/reviews")
 def get_reviews():
     return [
@@ -27,11 +23,13 @@ def get_reviews():
         {"filename": "file2.py", "issues": 2}
     ]
 
-
-# Serve index.html for all unmatched routes (supports React Router)
+# ✅ Serve index.html for unmatched routes (React Router support)
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
     index_path = os.path.join("app", "static", "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return {"detail": "Not Found"}
+
+# ✅ Mount static React files last
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
