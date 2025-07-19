@@ -1,28 +1,37 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pathlib import Path
+from fastapi.middleware.cors import CORSMiddleware
 import os
 
 app = FastAPI()
 
-# Serve React build (static files)
-static_dir = Path(__file__).parent / "app" / "static"
-app.mount("/static", StaticFiles(directory=static_dir / "static"), name="static")
+# Allow cross-origin requests if needed
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # You can restrict this in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/", include_in_schema=False)
-async def serve_react_index():
-    index_path = static_dir / "index.html"
-    if index_path.exists():
-        return FileResponse(index_path)
-    return {"detail": "index.html not found"}
+# Mount React build folder
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
 
-@app.get("/{full_path:path}", include_in_schema=False)
+
+# Example API endpoint
+@app.get("/api/reviews")
+def get_reviews():
+    return [
+        {"filename": "file1.py", "issues": 5},
+        {"filename": "file2.py", "issues": 2}
+    ]
+
+
+# Serve index.html for all unmatched routes (supports React Router)
+@app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
-    """
-    Serve React frontend for any path not matched by backend
-    """
-    index_path = static_dir / "index.html"
-    if index_path.exists():
+    index_path = os.path.join("app", "static", "index.html")
+    if os.path.exists(index_path):
         return FileResponse(index_path)
-    return {"detail": "Page not found"}
+    return {"detail": "Not Found"}
