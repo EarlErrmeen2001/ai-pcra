@@ -10,7 +10,7 @@ import json
 
 app = FastAPI()
 
-# ✅ CORS setup (adjust in production)
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ SQLite database setup
+# Database setup
 DATABASE_URL = "sqlite:///./reviews.db"
 Base = declarative_base()
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -34,21 +34,23 @@ class Review(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# ✅ Webhook handler for code analysis
+# Serve frontend
+app.mount("/static", StaticFiles(directory="app/static/static"), name="static")
+
+@app.get("/")
+async def serve_index():
+    return FileResponse("app/static/index.html")
+
+@app.get("/favicon.ico")
+async def favicon():
+    return FileResponse("app/static/favicon.ico")
+
 @app.post("/webhook")
 async def webhook(request: Request):
-    try:
-        data = await request.json()
-    except Exception:
-        return JSONResponse(status_code=400, content={"detail": "Invalid JSON"})
-
+    data = await request.json()
     filename = data.get("filename")
     code = data.get("code")
 
-    if not filename or not code:
-        return JSONResponse(status_code=400, content={"detail": "Missing filename or code"})
-
-    # Basic code analysis
     issues = []
     lines = code.split("\n")
     for i, line in enumerate(lines, start=1):
@@ -57,14 +59,12 @@ async def webhook(request: Request):
         if "== None" in line:
             issues.append({"line": i, "issue": "Use 'is' when comparing to None."})
 
-    # Save to database
     review = Review(filename=filename, issues=json.dumps(issues))
     session.add(review)
     session.commit()
 
     return JSONResponse(content={"status": "received", "issues": issues})
 
-# ✅ Return all stored reviews
 @app.get("/api/reviews")
 def get_reviews():
     reviews = session.query(Review).all()
@@ -76,13 +76,7 @@ def get_reviews():
         for r in reviews
     ]
 
-# ✅ React fallback route
+# Catch-all for React Router paths (must be last)
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
-    index_path = os.path.join("app", "static", "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return JSONResponse(status_code=404, content={"detail": "Not Found"})
-
-# ✅ Static frontend (⚠️ this MUST be at the end)
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
+    return FileResponse("app/static/index.html")
