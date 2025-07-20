@@ -3,10 +3,11 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import json
 
 app = FastAPI()
 
-# CORS for frontend requests
+# Allow CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,23 +16,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files (React build)
+# Serve static React files
 app.mount("/static", StaticFiles(directory="app/static/static"), name="static")
 
-# Serve index.html at root
-@app.get("/")
-async def serve_root():
-    return FileResponse("app/static/index.html")
+# ✅ FIRST: Define /api route
+@app.get("/api/reviews")
+async def get_reviews():
+    try:
+        with open("app/data.json", "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
 
-# Handle unmatched frontend routes (for React Router)
-@app.get("/{full_path:path}")
-async def serve_react_app(full_path: str):
-    index_path = os.path.join("app", "static", "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return JSONResponse(status_code=404, content={"detail": "Not Found"})
-
-# Webhook POST endpoint
+# ✅ THEN: Define POST /webhook
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -46,19 +43,20 @@ async def webhook(request: Request):
         if "== None" in line:
             issues.append({"line": i, "issue": "Use 'is' when comparing to None."})
 
-    # Save latest webhook submission (simulate DB)
     with open("app/data.json", "w") as f:
-        import json
         json.dump([{"filename": filename, "issues": issues}], f)
 
     return JSONResponse(content={"status": "received", "issues": issues})
 
-# API to retrieve latest webhook review results
-@app.get("/api/reviews")
-async def get_reviews():
-    try:
-        with open("app/data.json", "r") as f:
-            import json
-            return json.load(f)
-    except FileNotFoundError:
-        return []
+# ✅ Then: index.html at root
+@app.get("/")
+async def serve_root():
+    return FileResponse("app/static/index.html")
+
+# ✅ LAST: Wildcard route for React Router
+@app.get("/{full_path:path}")
+async def serve_react_app(full_path: str):
+    index_path = os.path.join("app", "static", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})
