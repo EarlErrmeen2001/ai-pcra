@@ -1,17 +1,20 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
-import "./App.css";
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import './App.css';
 
 function App() {
   const [reviews, setReviews] = useState([]);
-  const [file, setFile] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
 
   const fetchReviews = async () => {
     try {
-      const res = await axios.get("/api/reviews");
-      setReviews(res.data);
+      const response = await axios.get('/api/reviews');
+      setReviews(response.data);
     } catch (err) {
-      console.error("Error fetching reviews:", err);
+      console.error('Error fetching reviews:', err);
+      setError('Failed to load reviews.');
     }
   };
 
@@ -20,26 +23,40 @@ function App() {
   }, []);
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    setSelectedFile(e.target.files[0]);
+    setError('');
   };
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (!selectedFile) {
+      setError('Please select a Python file to upload.');
+      return;
+    }
+
+    if (!selectedFile.name.endsWith('.py')) {
+      setError('Only .py files are allowed.');
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = async () => {
       const code = reader.result;
-      const filename = file.name;
-
       try {
-        await axios.post("/webhook", { filename, code });
-        fetchReviews(); // Refresh results
+        setUploading(true);
+        await axios.post('/webhook', {
+          filename: selectedFile.name,
+          code,
+        });
+        setSelectedFile(null);
+        fetchReviews(); // refresh list
       } catch (err) {
-        console.error("Upload failed:", err);
+        console.error('Upload error:', err);
+        setError('Upload failed. Try again.');
+      } finally {
+        setUploading(false);
       }
     };
-
-    reader.readAsText(file);
+    reader.readAsText(selectedFile);
   };
 
   return (
@@ -51,30 +68,30 @@ function App() {
 
       <div className="upload-section">
         <input type="file" accept=".py" onChange={handleFileChange} />
-        <button onClick={handleUpload}>Upload & Analyze</button>
+        <button onClick={handleUpload} disabled={uploading}>
+          {uploading ? 'Uploading...' : 'Upload and Analyze'}
+        </button>
+        {error && <p style={{ color: 'red' }}>{error}</p>}
       </div>
 
       <div className="reviews-container">
-        {reviews.length === 0 ? (
-          <p>No reviews found.</p>
-        ) : (
-          reviews.map((review, index) => (
-            <div key={index} className="review-card">
-              <h2>{review.filename}</h2>
-              {review.issues.length === 0 ? (
-                <p className="no-issues">No issues found!</p>
-              ) : (
-                <ul>
-                  {review.issues.map((issue, i) => (
-                    <li key={i}>
-                      Line {issue.line}: {issue.issue}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))
-        )}
+        {reviews.length === 0 && <p>No reviews found yet.</p>}
+        {reviews.map((review, idx) => (
+          <div key={idx} className="review-card">
+            <h2>{review.filename}</h2>
+            {review.issues.length === 0 ? (
+              <p className="no-issues">✅ No issues found</p>
+            ) : (
+              <ul>
+                {review.issues.map((issue, i) => (
+                  <li key={i}>
+                    Line {issue.line}: {issue.issue}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );
