@@ -6,6 +6,7 @@ import os
 
 app = FastAPI()
 
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,8 +15,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
+# ✅ Serve frontend from /static instead of /
+app.mount("/static", StaticFiles(directory="app/static", html=True), name="static")
 
+# ✅ Your API route (works now!)
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -23,7 +26,8 @@ async def webhook(request: Request):
     code = data.get("code")
 
     issues = []
-    for i, line in enumerate(code.splitlines(), 1):
+    lines = code.split("\n")
+    for i, line in enumerate(lines, start=1):
         if "print(" in line:
             issues.append({"line": i, "issue": "Avoid using print statements in production."})
         if "== None" in line:
@@ -31,13 +35,7 @@ async def webhook(request: Request):
 
     return JSONResponse(content={"status": "received", "issues": issues})
 
-@app.get("/api/reviews")
-def get_reviews():
-    return [
-        {"filename": "file1.py", "issues": 5},
-        {"filename": "file2.py", "issues": 2}
-    ]
-
+# ✅ React catch-all route
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
     index_path = os.path.join("app", "static", "index.html")
