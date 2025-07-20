@@ -10,7 +10,7 @@ import json
 
 app = FastAPI()
 
-# Allow all CORS origins (adjust in production)
+# ✅ CORS setup (adjust in production)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Setup SQLite DB
+# ✅ SQLite database setup
 DATABASE_URL = "sqlite:///./reviews.db"
 Base = declarative_base()
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -34,16 +34,21 @@ class Review(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# Serve React build
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
-
-# 📨 Webhook handler
+# ✅ Webhook handler for code analysis
 @app.post("/webhook")
 async def webhook(request: Request):
-    data = await request.json()
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"detail": "Invalid JSON"})
+
     filename = data.get("filename")
     code = data.get("code")
 
+    if not filename or not code:
+        return JSONResponse(status_code=400, content={"detail": "Missing filename or code"})
+
+    # Basic code analysis
     issues = []
     lines = code.split("\n")
     for i, line in enumerate(lines, start=1):
@@ -59,7 +64,7 @@ async def webhook(request: Request):
 
     return JSONResponse(content={"status": "received", "issues": issues})
 
-# 🧾 Get stored reviews
+# ✅ Return all stored reviews
 @app.get("/api/reviews")
 def get_reviews():
     reviews = session.query(Review).all()
@@ -71,10 +76,13 @@ def get_reviews():
         for r in reviews
     ]
 
-# React route fallback
+# ✅ React fallback route
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
     index_path = os.path.join("app", "static", "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
     return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
+# ✅ Static frontend (⚠️ this MUST be at the end)
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
