@@ -6,27 +6,19 @@ import os
 
 app = FastAPI()
 
-# ✅ Allow CORS (adjust in production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict this to your frontend domain
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ Global in-memory store for webhook results
 reviews = []
 
-# ✅ Mount React frontend static files
+# ✅ Mount static files at root
 app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
 
-# ✅ Return stored webhook reviews
-@app.get("/api/reviews")
-def get_reviews():
-    return reviews
-
-# ✅ Handle webhook submissions
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -44,7 +36,10 @@ async def webhook(request: Request):
     reviews.append({"filename": filename, "issues": issues})
     return JSONResponse(content={"status": "received", "issues": issues})
 
-# ✅ Serve index.html for all unmatched routes (React Router support)
+@app.get("/api/reviews")
+def get_reviews():
+    return reviews
+
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
     index_path = os.path.join("app", "static", "index.html")
