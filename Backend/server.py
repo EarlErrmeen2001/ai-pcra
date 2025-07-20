@@ -6,6 +6,7 @@ import os
 
 app = FastAPI()
 
+# CORS for frontend requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,11 +15,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-reviews = []
+# Mount static files (React build)
+app.mount("/static", StaticFiles(directory="app/static/static"), name="static")
 
-# ✅ Mount static files at root
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
+# Serve index.html at root
+@app.get("/")
+async def serve_root():
+    return FileResponse("app/static/index.html")
 
+# Handle unmatched frontend routes (for React Router)
+@app.get("/{full_path:path}")
+async def serve_react_app(full_path: str):
+    index_path = os.path.join("app", "static", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})
+
+# Webhook POST endpoint
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -33,16 +46,19 @@ async def webhook(request: Request):
         if "== None" in line:
             issues.append({"line": i, "issue": "Use 'is' when comparing to None."})
 
-    reviews.append({"filename": filename, "issues": issues})
+    # Save latest webhook submission (simulate DB)
+    with open("app/data.json", "w") as f:
+        import json
+        json.dump([{"filename": filename, "issues": issues}], f)
+
     return JSONResponse(content={"status": "received", "issues": issues})
 
+# API to retrieve latest webhook review results
 @app.get("/api/reviews")
-def get_reviews():
-    return reviews
-
-@app.get("/{full_path:path}")
-async def serve_react_app(full_path: str):
-    index_path = os.path.join("app", "static", "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return JSONResponse(status_code=404, content={"detail": "Not Found"})
+async def get_reviews():
+    try:
+        with open("app/data.json", "r") as f:
+            import json
+            return json.load(f)
+    except FileNotFoundError:
+        return []
