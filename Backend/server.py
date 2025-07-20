@@ -2,12 +2,15 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import Column, Integer, String, create_engine, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 import os
 import json
 
 app = FastAPI()
 
-# Allow CORS
+# Allow all CORS origins (adjust in production)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,19 +19,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve static React files
-app.mount("/static", StaticFiles(directory="app/static/static"), name="static")
+# Setup SQLite DB
+DATABASE_URL = "sqlite:///./reviews.db"
+Base = declarative_base()
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(bind=engine)
+session = SessionLocal()
 
-# ✅ FIRST: Define /api route
-@app.get("/api/reviews")
-async def get_reviews():
-    try:
-        with open("app/data.json", "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return []
+class Review(Base):
+    __tablename__ = "reviews"
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String, nullable=False)
+    issues = Column(Text)  # Stored as JSON string
 
-# ✅ THEN: Define POST /webhook
+Base.metadata.create_all(bind=engine)
+
+# Serve React build
+app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
+
+# 📨 Webhook handler
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -43,17 +52,26 @@ async def webhook(request: Request):
         if "== None" in line:
             issues.append({"line": i, "issue": "Use 'is' when comparing to None."})
 
-    with open("app/data.json", "w") as f:
-        json.dump([{"filename": filename, "issues": issues}], f)
+    # Save to database
+    review = Review(filename=filename, issues=json.dumps(issues))
+    session.add(review)
+    session.commit()
 
     return JSONResponse(content={"status": "received", "issues": issues})
 
-# ✅ Then: index.html at root
-@app.get("/")
-async def serve_root():
-    return FileResponse("app/static/index.html")
+# 🧾 Get stored reviews
+@app.get("/api/reviews")
+def get_reviews():
+    reviews = session.query(Review).all()
+    return [
+        {
+            "filename": r.filename,
+            "issues": json.loads(r.issues)
+        }
+        for r in reviews
+    ]
 
-# ✅ LAST: Wildcard route for React Router
+# React route fallback
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
     index_path = os.path.join("app", "static", "index.html")
