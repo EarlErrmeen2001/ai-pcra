@@ -6,7 +6,7 @@ import os
 
 app = FastAPI()
 
-# Allow CORS for all origins (adjust for production)
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,12 +15,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Mount React build output
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
+# ✅ Mount React static files under /static
+app.mount("/static", StaticFiles(directory="app/static/static"), name="static")
 
-# ✅ In-memory storage for code review results
+# ✅ In-memory review results
 stored_reviews = []
 
+# ✅ Webhook to analyze and store code issues
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -35,15 +36,15 @@ async def webhook(request: Request):
         if "== None" in line:
             issues.append({"line": i, "issue": "Use 'is' when comparing to None."})
 
-    # ✅ Store the review result
     stored_reviews.append({"filename": filename, "issues": issues})
     return JSONResponse(content={"status": "received", "issues": issues})
 
+# ✅ API to retrieve stored reviews
 @app.get("/api/reviews")
 def get_reviews():
     return stored_reviews
 
-# ✅ Catch-all route for React Router support
+# ✅ Serve React index.html manually
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
     index_path = os.path.join("app", "static", "index.html")
