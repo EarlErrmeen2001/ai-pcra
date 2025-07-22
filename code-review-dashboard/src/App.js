@@ -62,7 +62,7 @@ function App() {
   return (
     <div className="app-container">
       <header>
-        <h1>🔍 Code Review Analytics</h1>
+        <h1>🔍 Capital City University AI Powered Code Review Assistant</h1>
         <p className="subtitle">Results from analyzed code submissions</p>
       </header>
 
