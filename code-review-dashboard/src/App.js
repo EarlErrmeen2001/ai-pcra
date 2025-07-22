@@ -62,7 +62,11 @@ function App() {
   return (
     <div className="app-container">
       <header>
-        <h1>🔍 Capital City University AI Powered Code Review Assistant</h1>
+        <h1>🔍 Capital City University Code Review Assistant</h1>
+        <p className="subtitle">🚀 Capital City University AI-PCRA TEAM 👨‍💻👩‍💻🧠💻</p>
+        <p className="subtitle">🧑‍💻 Lead Dev: Alameen Idris Muhammad</p>
+        <p className="subtitle">👥 Team: Collaborating to catch bugs 🐛, review Python code 🐍, and deploy with confidence 🎯</p>
+        <p className="subtitle">💻 React + FastAPI + SQLite, 📦 Deployed on Render, 🌍 Smart automation for better code!</p>
         <p className="subtitle">Results from analyzed code submissions</p>
       </header>
 

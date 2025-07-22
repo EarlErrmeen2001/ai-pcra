@@ -1,15 +1,3 @@
-# 🚀 AI-PCRA TEAM 👨‍💻👩‍💻🧠💻
-# ===================================
-# 🔬 AI-Powered Code Review Assistant
-# 🧑‍💻 Lead Dev: Alameen Idris Muhammad
-# 👥 Team: Collaborating to catch bugs 🐛,
-#          review Python code 🐍, and
-#          deploy with confidence 🎯
-# -----------------------------------
-# 💻 React + FastAPI + SQLite
-# 📦 Deployed on Render
-# 🌍 Smart automation for better code!
-
 from fastapi import FastAPI
 
 app = FastAPI()
