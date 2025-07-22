@@ -1,13 +1,5 @@
-from fastapi import FastAPI
-
-app = FastAPI()
-
-@app.get("/")
-def root():
-    return {"message": "Hello from AI-PCRA!"}
-
-from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, Request, UploadFile, File, Form
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import Column, Integer, String, create_engine, Text
@@ -18,7 +10,7 @@ import json
 
 app = FastAPI()
 
-# Enable CORS
+# Enable CORS (adjust for production)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -27,7 +19,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database setup
+# SQLite DB setup
 DATABASE_URL = "sqlite:///./reviews.db"
 Base = declarative_base()
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -38,21 +30,14 @@ class Review(Base):
     __tablename__ = "reviews"
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String, nullable=False)
-    issues = Column(Text)  # Stored as JSON string
+    issues = Column(Text)  # JSON string
 
 Base.metadata.create_all(bind=engine)
 
-# Serve frontend
-app.mount("/static", StaticFiles(directory="app/static/static"), name="static")
+# Mount React build directory
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-@app.get("/")
-async def serve_index():
-    return FileResponse("app/static/index.html")
-
-@app.get("/favicon.ico")
-async def favicon():
-    return FileResponse("app/static/favicon.ico")
-
+# 📨 Webhook endpoint
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
@@ -67,12 +52,21 @@ async def webhook(request: Request):
         if "== None" in line:
             issues.append({"line": i, "issue": "Use 'is' when comparing to None."})
 
+    # Save to DB
     review = Review(filename=filename, issues=json.dumps(issues))
     session.add(review)
     session.commit()
 
     return JSONResponse(content={"status": "received", "issues": issues})
 
+# 📤 Upload endpoint (for .py file uploads)
+@app.post("/upload")
+async def upload(file: UploadFile = File(...)):
+    contents = await file.read()
+    code = contents.decode("utf-8")
+    return await webhook(Request(scope={"type": "http"}, receive=None), filename=file.filename, code=code)
+
+# 🧾 Retrieve all reviews
 @app.get("/api/reviews")
 def get_reviews():
     reviews = session.query(Review).all()
@@ -84,7 +78,10 @@ def get_reviews():
         for r in reviews
     ]
 
-# Catch-all for React Router paths (must be last)
+# 🌐 Serve React frontend
 @app.get("/{full_path:path}")
 async def serve_react_app(full_path: str):
-    return FileResponse("app/static/index.html")
+    index_path = os.path.join("app", "static", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})
