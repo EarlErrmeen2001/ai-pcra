@@ -1,6 +1,6 @@
-# 🚀 Capital City University TEAM 👨‍💻👩‍💻🧠💻
+# 🚀 AI-PCRA TEAM 👨‍💻👩‍💻🧠💻
 # ===================================
-# 🔬 Capital City University AI-Powered Code Review Assistant
+# 🔬 AI-Powered Code Review Assistant
 # 🧑‍💻 Lead Dev: Alameen Idris Muhammad
 # 👥 Team: Collaborating to catch bugs 🐛,
 #          review Python code 🐍, and
@@ -9,6 +9,15 @@
 # 💻 React + FastAPI + SQLite
 # 📦 Deployed on Render
 # 🌍 Smart automation for better code!
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def root():
+    return {"message": "Hello from AI-PCRA!"}
+
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles

@@ -1,3 +1,15 @@
+// 🚀 AI-PCRA TEAM 👨‍💻👩‍💻🧠💻
+// ===================================
+// 🔬 AI-Powered Code Review Assistant
+// 🧑‍💻 Lead Dev: Alameen Idris Muhammad
+// 👥 Team: Collaborating to catch bugs 🐛,
+//          review code intelligently 🐍,
+//          and deliver with confidence 🎯
+// -----------------------------------
+// 💻 React Frontend + FastAPI Backend
+// 📦 Hosted on Render
+// 🌍 Smart UI for smarter reviews!
+
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
