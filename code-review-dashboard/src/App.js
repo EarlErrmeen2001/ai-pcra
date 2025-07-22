@@ -2,16 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 
-// 🚀 AI-PCRA TEAM 👨‍💻👩‍💻🧠💻
-function TeamBanner() {
-  return (
-    <div className="team-banner">
-      🚀 <strong>AI‑PCRA TEAM</strong> 👨‍💻👩‍💻🧠💻 — 
-      🔬 AI‑Powered Code Review • 🧑‍💻 Lead Dev: Alameen Idris Muhammad • 🚀
-    </div>
-  );
-}
-
 function App() {
   const [reviews, setReviews] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -58,7 +48,7 @@ function App() {
           code,
         });
         setSelectedFile(null);
-        fetchReviews();
+        fetchReviews(); // refresh list
       } catch (err) {
         console.error('Upload error:', err);
         setError('Upload failed. Try again.');
@@ -71,8 +61,6 @@ function App() {
 
   return (
     <div className="app-container">
-      <TeamBanner />
-
       <header>
         <h1>🔍 Capital City University AI Powered Code Review Assistant</h1>
         <p className="subtitle">Results from analyzed code submissions</p>
@@ -83,7 +71,7 @@ function App() {
         <button onClick={handleUpload} disabled={uploading}>
           {uploading ? 'Uploading...' : 'Upload and Analyze'}
         </button>
-        {error && <p className="error-text">{error}</p>}
+        {error && <p style={{ color: 'red' }}>{error}</p>}
       </div>
 
       <div className="reviews-container">
