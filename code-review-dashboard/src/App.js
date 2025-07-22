@@ -1,18 +1,16 @@
-// 🚀 AI-PCRA TEAM 👨‍💻👩‍💻🧠💻
-// ===================================
-// 🔬 AI-Powered Code Review Assistant
-// 🧑‍💻 Lead Dev: Alameen Idris Muhammad
-// 👥 Team: Collaborating to catch bugs 🐛,
-//          review code intelligently 🐍,
-//          and deliver with confidence 🎯
-// -----------------------------------
-// 💻 React Frontend + FastAPI Backend
-// 📦 Hosted on Render
-// 🌍 Smart UI for smarter reviews!
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
+
+// 🚀 AI-PCRA TEAM 👨‍💻👩‍💻🧠💻
+function TeamBanner() {
+  return (
+    <div className="team-banner">
+      🚀 <strong>AI‑PCRA TEAM</strong> 👨‍💻👩‍💻🧠💻 — 
+      🔬 AI‑Powered Code Review • 🧑‍💻 Lead Dev: Alameen Idris Muhammad • 🚀
+    </div>
+  );
+}
 
 function App() {
   const [reviews, setReviews] = useState([]);
@@ -60,7 +58,7 @@ function App() {
           code,
         });
         setSelectedFile(null);
-        fetchReviews(); // refresh list
+        fetchReviews();
       } catch (err) {
         console.error('Upload error:', err);
         setError('Upload failed. Try again.');
@@ -73,6 +71,8 @@ function App() {
 
   return (
     <div className="app-container">
+      <TeamBanner />
+
       <header>
         <h1>🔍 Capital City University AI Powered Code Review Assistant</h1>
         <p className="subtitle">Results from analyzed code submissions</p>
@@ -83,7 +83,7 @@ function App() {
         <button onClick={handleUpload} disabled={uploading}>
           {uploading ? 'Uploading...' : 'Upload and Analyze'}
         </button>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+        {error && <p className="error-text">{error}</p>}
       </div>
 
       <div className="reviews-container">
